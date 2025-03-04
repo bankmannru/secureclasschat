@@ -6,26 +6,25 @@ import ChatRoom from "@/components/ChatRoom";
 
 // Mock data mapping channel IDs to names
 const channelNames: Record<string, string> = {
-  "announcements": "📢 Announcements",
-  "general": "💬 General",
-  "questions": "❓ Questions",
-  "homework": "📚 Homework",
-  "exams": "📝 Exams",
-  "resources": "📌 Resources",
-  "group-a": "👥 Group A",
-  "group-b": "👥 Group B",
+  "announcements": "📢 Объявления",
+  "general": "💬 Общий чат",
+  "questions": "❓ Вопросы",
+  "homework": "📚 Домашняя работа",
+  "exams": "📝 Экзамены",
+  "resources": "📌 Материалы",
+  "group-a": "👥 Группа А",
+  "group-b": "👥 Группа Б",
 };
 
 // Mock data mapping class IDs to names
 const classNames: Record<string, string> = {
-  "math101": "Mathematics 101",
-  "physics205": "Physics 205",
-  "chemistry110": "Chemistry 110",
-  "biology180": "Biology 180",
+  "4m": "Класс 4М",
 };
 
 const Dashboard = () => {
-  const [activeClass, setActiveClass] = useState("math101");
+  const [activeClass, setActiveClass] = useState(() => {
+    return localStorage.getItem("activeClass") || "4m";
+  });
   const [activeChannel, setActiveChannel] = useState("general");
   const navigate = useNavigate();
 
@@ -36,6 +35,11 @@ const Dashboard = () => {
       navigate("/");
     }
   }, [navigate]);
+
+  // Update localStorage when active class changes
+  useEffect(() => {
+    localStorage.setItem("activeClass", activeClass);
+  }, [activeClass]);
 
   return (
     <div className="h-screen flex flex-col">

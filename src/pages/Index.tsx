@@ -18,18 +18,18 @@ const Index = () => {
   const features = [
     {
       icon: <Shield className="h-5 w-5 text-primary" />,
-      title: "Secure Access",
-      description: "Access is restricted to authorized students and administrators only."
+      title: "Безопасный доступ",
+      description: "Доступ ограничен только для авторизованных учеников и преподавателей."
     },
     {
       icon: <BookOpen className="h-5 w-5 text-primary" />,
-      title: "Class-Specific Channels",
-      description: "Dedicated spaces for each of your classes and topics."
+      title: "Каналы для класса",
+      description: "Отдельные пространства для вашего класса и учебных тем."
     },
     {
       icon: <MessageSquare className="h-5 w-5 text-primary" />,
-      title: "Real-Time Messaging",
-      description: "Instant communication with your classmates and teachers."
+      title: "Общение в реальном времени",
+      description: "Мгновенное общение с одноклассниками и учителями."
     }
   ];
 
@@ -41,7 +41,7 @@ const Index = () => {
       <header className="relative z-10 container mx-auto py-8 flex justify-between items-center">
         <div className="flex items-center gap-2">
           <BookOpen className="h-6 w-6 text-primary" />
-          <h1 className="text-xl font-semibold">SecureClassChat</h1>
+          <h1 className="text-xl font-semibold">Чат класса 4М</h1>
         </div>
       </header>
 
@@ -50,16 +50,16 @@ const Index = () => {
           <div className="space-y-6">
             <div className="inline-flex items-center rounded-full px-3 py-1 text-sm bg-primary/10 text-primary">
               <Shield className="mr-1 h-3.5 w-3.5" />
-              <span>Secure School Communication Platform</span>
+              <span>Безопасная платформа для общения класса</span>
             </div>
             
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-balance">
-              The safe space for class discussions
+              Безопасное пространство для обсуждений в классе
             </h1>
             
             <p className="text-lg text-muted-foreground text-balance">
-              Connect with your classmates and teachers in a secure and private environment.
-              Share ideas, ask questions, and collaborate on projects.
+              Общайтесь с одноклассниками и учителями в безопасной и закрытой среде.
+              Делитесь идеями, задавайте вопросы и сотрудничайте над проектами.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-4">
@@ -82,7 +82,7 @@ const Index = () => {
       </main>
 
       <footer className="relative z-10 container mx-auto py-6 text-center text-sm text-muted-foreground">
-        <p>© 2023 SecureClassChat. All rights reserved.</p>
+        <p>© 2023 Чат класса 4М. Все права защищены.</p>
       </footer>
     </div>
   );

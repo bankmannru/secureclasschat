@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Book, ChevronLeft, ChevronRight, LogOut, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,56 +9,41 @@ import { toast } from "sonner";
 import ChannelList from "./ChannelList";
 import { cn } from "@/lib/utils";
 
-// Mock class data - in a real app, this would come from Supabase
+// Updated class data to only include 4M
 const classes = [
   {
-    id: "math101",
-    name: "Mathematics 101",
+    id: "4m",
+    name: "Класс 4М",
     iconColor: "bg-blue-500",
-  },
-  {
-    id: "physics205",
-    name: "Physics 205",
-    iconColor: "bg-green-500",
-  },
-  {
-    id: "chemistry110",
-    name: "Chemistry 110",
-    iconColor: "bg-purple-500",
-  },
-  {
-    id: "biology180",
-    name: "Biology 180",
-    iconColor: "bg-pink-500",
-  },
+  }
 ];
 
 // Mock channel data - in a real app, this would come from Supabase
 const channelGroups = [
   {
     id: "general",
-    name: "General",
+    name: "Общее",
     channels: [
-      { id: "announcements", name: "Announcements", isPrivate: true },
-      { id: "general", name: "General", isPrivate: false, unreadCount: 3 },
-      { id: "questions", name: "Questions", isPrivate: false },
+      { id: "announcements", name: "Объявления", isPrivate: true },
+      { id: "general", name: "Общий чат", isPrivate: false, unreadCount: 3 },
+      { id: "questions", name: "Вопросы", isPrivate: false },
     ],
   },
   {
     id: "topics",
-    name: "Topics",
+    name: "Темы",
     channels: [
-      { id: "homework", name: "Homework", isPrivate: false },
-      { id: "exams", name: "Exams", isPrivate: false },
-      { id: "resources", name: "Resources", isPrivate: false },
+      { id: "homework", name: "Домашняя работа", isPrivate: false },
+      { id: "exams", name: "Экзамены", isPrivate: false },
+      { id: "resources", name: "Материалы", isPrivate: false },
     ],
   },
   {
     id: "groups",
-    name: "Study Groups",
+    name: "Группы",
     channels: [
-      { id: "group-a", name: "Group A", isPrivate: true },
-      { id: "group-b", name: "Group B", isPrivate: true },
+      { id: "group-a", name: "Группа А", isPrivate: true },
+      { id: "group-b", name: "Группа Б", isPrivate: true },
     ],
   },
 ];
@@ -74,9 +59,18 @@ const Sidebar = ({ activeClass, activeChannel, onSelectClass, onSelectChannel }:
   const [isCollapsed, setIsCollapsed] = useState(false);
   const navigate = useNavigate();
 
+  // Load the active class from localStorage when component mounts
+  useEffect(() => {
+    const storedActiveClass = localStorage.getItem("activeClass");
+    if (storedActiveClass && classes.some(c => c.id === storedActiveClass)) {
+      onSelectClass(storedActiveClass);
+    }
+  }, [onSelectClass]);
+
   const handleLogout = () => {
     localStorage.removeItem("isAuthenticated");
-    toast.success("Logged out successfully");
+    localStorage.removeItem("activeClass");
+    toast.success("Выход выполнен успешно");
     navigate("/");
   };
 
@@ -91,7 +85,7 @@ const Sidebar = ({ activeClass, activeChannel, onSelectClass, onSelectChannel }:
       <div className="h-14 border-b flex items-center px-4 gap-3 shrink-0">
         <Book className="h-5 w-5 text-primary" />
         {!isCollapsed && (
-          <h2 className="font-medium truncate text-sm">Secure Class Chat</h2>
+          <h2 className="font-medium truncate text-sm">Чат класса</h2>
         )}
         <Button
           variant="ghost"
@@ -165,15 +159,15 @@ const Sidebar = ({ activeClass, activeChannel, onSelectClass, onSelectChannel }:
               </Button>
             </TooltipTrigger>
             <TooltipContent side="right">
-              <p>Logout</p>
+              <p>Выйти</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
         
         {!isCollapsed && (
           <div className="ml-2 mr-auto">
-            <div className="text-sm font-medium">John Doe</div>
-            <div className="text-xs text-muted-foreground">Student</div>
+            <div className="text-sm font-medium">Ученик</div>
+            <div className="text-xs text-muted-foreground">Класс 4М</div>
           </div>
         )}
         
@@ -190,7 +184,7 @@ const Sidebar = ({ activeClass, activeChannel, onSelectClass, onSelectChannel }:
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Members</p>
+                <p>Участники</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
