@@ -57,7 +57,6 @@ const Dashboard = () => {
           activeChannel={activeChannel}
           onSelectClass={setActiveClass}
           onSelectChannel={setActiveChannel}
-          userName={userName}
         />
         <div className="flex-1 flex flex-col bg-background">
           <ChatRoom
