@@ -69,6 +69,8 @@ const ChatRoom = ({ channelId, channelName }: ChatRoomProps) => {
 
   // Subscribe to real-time updates
   useEffect(() => {
+    console.log("Setting up realtime subscription for:", classId, channelId);
+    
     // Subscribe to new messages in this channel
     const channel = supabase
       .channel('public:messages')
@@ -80,6 +82,8 @@ const ChatRoom = ({ channelId, channelName }: ChatRoomProps) => {
           filter: `class_id=eq.${classId}&channel_id=eq.${channelId}`
         }, 
         async (payload) => {
+          console.log("New message received:", payload);
+          
           // When a new message is inserted, fetch the user data
           const { data, error } = await supabase
             .from("users")
@@ -106,10 +110,13 @@ const ChatRoom = ({ channelId, channelName }: ChatRoomProps) => {
           setMessages((currentMessages) => [...currentMessages, newMessage]);
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log("Subscription status:", status);
+      });
 
     // Clean up subscription on unmount
     return () => {
+      console.log("Cleaning up subscription");
       supabase.removeChannel(channel);
     };
   }, [channelId, classId]);
