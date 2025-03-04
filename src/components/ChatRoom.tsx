@@ -2,35 +2,8 @@
 import { useState, useEffect } from "react";
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
-
-// Mock user data - in a real app, this would come from auth state
-const currentUser = {
-  id: "1",
-  name: "John Doe",
-  avatar: "",
-};
-
-// Mock initial messages - in a real app, these would come from Supabase
-const initialMessages = [
-  {
-    id: "1",
-    user: { id: "2", name: "Sarah Chen", avatar: "" },
-    content: "Hey everyone! Has anyone started on the project for Professor Wilson's class?",
-    timestamp: new Date(Date.now() - 3600000),
-  },
-  {
-    id: "2",
-    user: { id: "3", name: "Michael Rodriguez", avatar: "" },
-    content: "I've just started gathering some research materials. It seems challenging!",
-    timestamp: new Date(Date.now() - 2400000),
-  },
-  {
-    id: "3",
-    user: { id: "4", name: "Emma Johnson", avatar: "" },
-    content: "I'm planning to start this weekend. Would anyone like to form a study group?",
-    timestamp: new Date(Date.now() - 1800000),
-  },
-];
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface ChatRoomProps {
   channelId: string;
@@ -38,31 +11,135 @@ interface ChatRoomProps {
 }
 
 const ChatRoom = ({ channelId, channelName }: ChatRoomProps) => {
-  const [messages, setMessages] = useState(initialMessages);
-  const [isLoading, setIsLoading] = useState(false);
+  const [messages, setMessages] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  const classId = localStorage.getItem("activeClass") || "4m";
+  const userId = localStorage.getItem("userId");
+  const userName = localStorage.getItem("userName");
 
+  // Fetch initial messages
   useEffect(() => {
-    // In a real app, this would fetch messages from Supabase based on the channelId
-    setIsLoading(true);
-    // Simulate loading delay
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 800);
+    const fetchMessages = async () => {
+      setIsLoading(true);
+      
+      try {
+        // Get messages for this channel and class
+        const { data, error } = await supabase
+          .from("messages")
+          .select(`
+            id,
+            content,
+            created_at,
+            users (
+              id,
+              user_name
+            )
+          `)
+          .eq("class_id", classId)
+          .eq("channel_id", channelId)
+          .order("created_at", { ascending: true });
 
-    return () => clearTimeout(timer);
-  }, [channelId]);
+        if (error) {
+          console.error("Error fetching messages:", error);
+          return;
+        }
 
-  const handleSendMessage = (content: string) => {
-    const newMessage = {
-      id: Date.now().toString(),
-      user: currentUser,
-      content,
-      timestamp: new Date(),
+        // Format messages for the MessageList component
+        const formattedMessages = data.map((message) => ({
+          id: message.id,
+          user: {
+            id: message.users.id,
+            name: message.users.user_name,
+          },
+          content: message.content,
+          timestamp: new Date(message.created_at),
+        }));
+
+        setMessages(formattedMessages);
+      } catch (error) {
+        console.error("Error in fetchMessages:", error);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    setMessages([...messages, newMessage]);
+    fetchMessages();
+  }, [channelId, classId]);
 
-    // In a real app, this would send the message to Supabase
+  // Subscribe to real-time updates
+  useEffect(() => {
+    // Subscribe to new messages in this channel
+    const channel = supabase
+      .channel('public:messages')
+      .on('postgres_changes', 
+        { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'messages',
+          filter: `class_id=eq.${classId}&channel_id=eq.${channelId}`
+        }, 
+        async (payload) => {
+          // When a new message is inserted, fetch the user data
+          const { data, error } = await supabase
+            .from("users")
+            .select("user_name")
+            .eq("id", payload.new.user_id)
+            .single();
+            
+          if (error) {
+            console.error("Error fetching user data:", error);
+            return;
+          }
+
+          // Add the new message to state
+          const newMessage = {
+            id: payload.new.id,
+            user: {
+              id: payload.new.user_id,
+              name: data.user_name,
+            },
+            content: payload.new.content,
+            timestamp: new Date(payload.new.created_at),
+          };
+          
+          setMessages((currentMessages) => [...currentMessages, newMessage]);
+        }
+      )
+      .subscribe();
+
+    // Clean up subscription on unmount
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [channelId, classId]);
+
+  const handleSendMessage = async (content: string) => {
+    if (!userId || !userName) {
+      toast.error("Пожалуйста, войдите снова");
+      return;
+    }
+
+    try {
+      // Insert the message into Supabase
+      const { error } = await supabase
+        .from("messages")
+        .insert([
+          {
+            user_id: userId,
+            class_id: classId,
+            channel_id: channelId,
+            content,
+          }
+        ]);
+
+      if (error) {
+        toast.error("Не удалось отправить сообщение");
+        console.error("Error sending message:", error);
+      }
+    } catch (error) {
+      console.error("Error in handleSendMessage:", error);
+    }
   };
 
   return (
@@ -75,7 +152,7 @@ const ChatRoom = ({ channelId, channelName }: ChatRoomProps) => {
         <div className="flex-1 flex items-center justify-center">
           <div className="flex flex-col items-center space-y-2">
             <div className="w-8 h-8 border-t-2 border-primary rounded-full animate-spin"></div>
-            <p className="text-sm text-muted-foreground">Loading messages...</p>
+            <p className="text-sm text-muted-foreground">Загрузка сообщений...</p>
           </div>
         </div>
       ) : (

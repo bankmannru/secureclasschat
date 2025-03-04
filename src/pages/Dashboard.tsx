@@ -26,13 +26,21 @@ const Dashboard = () => {
     return localStorage.getItem("activeClass") || "4m";
   });
   const [activeChannel, setActiveChannel] = useState("general");
+  const [userName, setUserName] = useState(() => {
+    return localStorage.getItem("userName") || "";
+  });
+  
   const navigate = useNavigate();
 
   useEffect(() => {
     // Check if the user is authenticated
     const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
-    if (!isAuthenticated) {
+    const storedUserName = localStorage.getItem("userName");
+    
+    if (!isAuthenticated || !storedUserName) {
       navigate("/");
+    } else {
+      setUserName(storedUserName);
     }
   }, [navigate]);
 
@@ -49,6 +57,7 @@ const Dashboard = () => {
           activeChannel={activeChannel}
           onSelectClass={setActiveClass}
           onSelectChannel={setActiveChannel}
+          userName={userName}
         />
         <div className="flex-1 flex flex-col bg-background">
           <ChatRoom
