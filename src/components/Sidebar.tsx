@@ -5,7 +5,7 @@ import { Book, ChevronLeft, ChevronRight, LogOut, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "sonner";
 import ChannelList from "./ChannelList";
 import { cn } from "@/lib/utils";
 
