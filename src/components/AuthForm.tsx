@@ -8,8 +8,6 @@ import { toast } from "sonner";
 import { LockKeyhole, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
-const ADMIN_CODE = "SQL"; // Special code for admin access
-
 const AuthForm = () => {
   const [userName, setUserName] = useState("");
   const [securityCode, setSecurityCode] = useState("");
@@ -22,21 +20,7 @@ const AuthForm = () => {
     setIsLoading(true);
 
     try {
-      // Check if attempting admin login with special code
-      if (securityCode.trim() === ADMIN_CODE && userName.trim().toLowerCase() === "admin") {
-        // Store admin status
-        localStorage.setItem("isAuthenticated", "true");
-        localStorage.setItem("isAdmin", "true");
-        localStorage.setItem("userName", "Администратор");
-        localStorage.setItem("userId", "admin-" + Date.now());
-        localStorage.setItem("activeClass", "4m");
-        
-        toast.success("Вход выполнен с правами администратора");
-        navigate("/dashboard");
-        return;
-      }
-
-      // Regular user authentication
+      // Check if the security code exists in the database
       const { data, error } = await supabase
         .from("class_security_codes")
         .select("class_id")
@@ -84,7 +68,6 @@ const AuthForm = () => {
 
       // Store user information
       localStorage.setItem("isAuthenticated", "true");
-      localStorage.setItem("isAdmin", "false");
       localStorage.setItem("userId", userData[0].id);
       localStorage.setItem("userName", userName.trim());
 
@@ -121,22 +104,13 @@ const AuthForm = () => {
           <form onSubmit={handleSecurityCodeSubmit} className="space-y-4">
             <div className="space-y-2">
               <Input
-                id="user-name"
-                placeholder="Введите имя"
-                type="text"
-                value={userName}
-                onChange={(e) => setUserName(e.target.value)}
-                className="h-12"
-                autoFocus
-                required
-              />
-              <Input
                 id="security-code"
                 placeholder="Введите код безопасности"
                 type="password"
                 value={securityCode}
                 onChange={(e) => setSecurityCode(e.target.value)}
                 className="h-12"
+                autoFocus
                 required
               />
             </div>

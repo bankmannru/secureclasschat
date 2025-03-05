@@ -8,9 +8,12 @@ type Message = {
     id: string;
     name: string;
     avatar?: string;
+    avatarEmoji?: string;
   };
   content: string;
   timestamp: Date;
+  mediaUrl?: string;
+  mediaType?: string;
 };
 
 interface MessageListProps {
@@ -28,6 +31,31 @@ const MessageList = ({ messages }: MessageListProps) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  const renderMedia = (mediaUrl?: string, mediaType?: string) => {
+    if (!mediaUrl) return null;
+    
+    if (mediaType?.startsWith("image")) {
+      return (
+        <img 
+          src={mediaUrl} 
+          alt="Изображение" 
+          className="mt-2 max-h-[300px] rounded-md cursor-pointer"
+          onClick={() => window.open(mediaUrl, "_blank")}
+        />
+      );
+    } else if (mediaType?.startsWith("video")) {
+      return (
+        <video 
+          src={mediaUrl} 
+          controls 
+          className="mt-2 max-h-[300px] max-w-full rounded-md"
+        />
+      );
+    }
+    
+    return null;
+  };
+
   return (
     <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
       {messages.length === 0 ? (
@@ -38,10 +66,18 @@ const MessageList = ({ messages }: MessageListProps) => {
         messages.map((message) => (
           <div key={message.id} className="flex items-start gap-3 animate-slide-in group">
             <Avatar className="mt-0.5 w-8 h-8 border">
-              <AvatarImage src={message.user.avatar} alt={message.user.name} />
-              <AvatarFallback className="text-xs font-medium">
-                {message.user.name.split(' ').map(n => n[0]).join('')}
-              </AvatarFallback>
+              {message.user.avatarEmoji ? (
+                <AvatarFallback className="bg-transparent text-lg">
+                  {message.user.avatarEmoji}
+                </AvatarFallback>
+              ) : (
+                <>
+                  <AvatarImage src={message.user.avatar} alt={message.user.name} />
+                  <AvatarFallback className="text-xs font-medium">
+                    {message.user.name.split(' ').map(n => n[0]).join('')}
+                  </AvatarFallback>
+                </>
+              )}
             </Avatar>
             <div className="flex-1 min-w-0">
               <div className="flex items-baseline gap-2">
@@ -50,7 +86,10 @@ const MessageList = ({ messages }: MessageListProps) => {
                   {formatTime(message.timestamp)}
                 </span>
               </div>
-              <p className="text-sm mt-1 break-words">{message.content}</p>
+              {message.content && (
+                <p className="text-sm mt-1 break-words">{message.content}</p>
+              )}
+              {renderMedia(message.mediaUrl, message.mediaType)}
             </div>
           </div>
         ))

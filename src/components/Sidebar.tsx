@@ -1,239 +1,205 @@
-
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Book, ChevronLeft, ChevronRight, LogOut, Users, Settings } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { toast } from "sonner";
-import ChannelList from "./ChannelList";
-import { cn } from "@/lib/utils";
+import {
+  Home,
+  LayoutDashboard,
+  Plus,
+  Settings,
+  Users,
+  LogOut,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import EmojiAvatarSelector from "./EmojiAvatarSelector";
 
-// Updated class data to only include 4M
-const classes = [
-  {
-    id: "4m",
-    name: "Класс 4М",
-    iconColor: "bg-blue-500",
-  }
-];
-
-interface SidebarProps {
+const Sidebar = ({ 
+  activeClass,
+  activeChannel,
+  onSelectClass,
+  onSelectChannel,
+}: {
   activeClass: string;
   activeChannel: string;
   onSelectClass: (classId: string) => void;
   onSelectChannel: (channelId: string) => void;
-  isAdmin?: boolean;
-  onToggleAdminPanel?: () => void;
-}
-
-const Sidebar = ({ 
-  activeClass, 
-  activeChannel, 
-  onSelectClass, 
-  onSelectChannel, 
-  isAdmin = false, 
-  onToggleAdminPanel 
-}: SidebarProps) => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [channelGroups, setChannelGroups] = useState([
-    {
-      id: "general",
-      name: "Общее",
-      channels: [
-        { id: "announcements", name: "Объявления", isPrivate: true },
-        { id: "general", name: "Общий чат", isPrivate: false, unreadCount: 3 },
-        { id: "questions", name: "Вопросы", isPrivate: false },
-      ],
-    },
-    {
-      id: "topics",
-      name: "Темы",
-      channels: [
-        { id: "homework", name: "Домашняя работа", isPrivate: false },
-        { id: "exams", name: "Экзамены", isPrivate: false },
-        { id: "resources", name: "Материалы", isPrivate: false },
-      ],
-    },
-    {
-      id: "groups",
-      name: "Группы",
-      channels: [
-        { id: "group-a", name: "Группа А", isPrivate: true },
-        { id: "group-b", name: "Группа Б", isPrivate: true },
-      ],
-    },
-  ]);
-  
+}) => {
+  const { toast } = useToast();
   const navigate = useNavigate();
-
-  // Load the active class from localStorage when component mounts
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [avatarEmoji, setAvatarEmoji] = useState<string>("👤");
+  
   useEffect(() => {
-    const storedActiveClass = localStorage.getItem("activeClass");
-    if (storedActiveClass && classes.some(c => c.id === storedActiveClass)) {
-      onSelectClass(storedActiveClass);
-    }
-    
-    // Load custom channels if available
-    const storedChannelGroups = localStorage.getItem("channelGroups");
-    if (storedChannelGroups) {
-      try {
-        const parsedGroups = JSON.parse(storedChannelGroups);
-        setChannelGroups(parsedGroups);
-      } catch (error) {
-        console.error("Error parsing stored channel groups:", error);
+    const fetchUserData = async () => {
+      const userId = localStorage.getItem("userId");
+      if (userId) {
+        try {
+          const { data, error } = await supabase
+            .from("users")
+            .select("avatar_emoji")
+            .eq("id", userId)
+            .single();
+            
+          if (!error && data) {
+            setAvatarEmoji(data.avatar_emoji || "👤");
+          }
+        } catch (error) {
+          console.error("Error fetching user avatar:", error);
+        }
       }
-    }
-  }, [onSelectClass]);
+    };
+    
+    fetchUserData();
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("isAuthenticated");
-    localStorage.removeItem("isAdmin");
-    localStorage.removeItem("activeClass");
-    localStorage.removeItem("userId");
     localStorage.removeItem("userName");
-    toast.success("Выход выполнен успешно");
+    localStorage.removeItem("userId");
     navigate("/");
+    toast({
+      title: "Вы вышли из системы",
+      description: "До встречи!",
+    });
   };
 
   return (
-    <div
-      className={cn(
-        "flex flex-col border-r h-full transition-all duration-300 bg-sidebar",
-        isCollapsed ? "w-[72px]" : "w-[260px]"
-      )}
-    >
-      {/* Sidebar header with class name */}
-      <div className="h-14 border-b flex items-center px-4 gap-3 shrink-0">
-        <Book className="h-5 w-5 text-primary" />
-        {!isCollapsed && (
-          <h2 className="font-medium truncate text-sm">Чат класса</h2>
-        )}
+    <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
+      <SheetTrigger asChild>
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 ml-auto"
-          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="md:hidden"
         >
-          {isCollapsed ? (
-            <ChevronRight className="h-4 w-4" />
-          ) : (
-            <ChevronLeft className="h-4 w-4" />
-          )}
+          <LayoutDashboard className="h-6 w-6" />
         </Button>
-      </div>
-
-      {/* Class selector */}
-      <div className="p-2 border-b">
-        <div className="flex flex-wrap gap-2">
-          {classes.map((classItem) => (
-            <TooltipProvider key={classItem.id} delayDuration={300}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={cn(
-                      "h-10 w-10 rounded-full relative",
-                      activeClass === classItem.id && "ring-2 ring-primary ring-offset-2"
-                    )}
-                    onClick={() => onSelectClass(classItem.id)}
-                  >
-                    <div className={cn("h-full w-full rounded-full flex items-center justify-center", classItem.iconColor)}>
-                      <span className="text-white font-medium text-sm">
-                        {classItem.name.substring(0, 1)}
-                      </span>
-                    </div>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  <p>{classItem.name}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          ))}
-        </div>
-      </div>
-
-      {/* Channel list */}
-      {!isCollapsed && (
-        <ScrollArea className="flex-1">
-          <ChannelList
-            groups={channelGroups}
-            activeChannelId={activeChannel}
-            onSelectChannel={onSelectChannel}
-          />
-        </ScrollArea>
-      )}
-
-      {/* User section */}
-      <div className="p-2 border-t mt-auto flex items-center">
-        <TooltipProvider delayDuration={300}>
-          <Tooltip>
-            <TooltipTrigger asChild>
+      </SheetTrigger>
+      <SheetContent className="w-full sm:w-64 border-r pr-0">
+        <SheetHeader className="pl-5 pt-5">
+          <SheetTitle>Меню</SheetTitle>
+          <SheetDescription>
+            Управляйте своей учетной записью и настройками.
+          </SheetDescription>
+        </SheetHeader>
+        <ScrollArea className="h-[calc(100vh-10rem)] pl-5">
+          <div className="mb-4 mt-6">
+            <div className="space-y-2 font-medium">
+              <h4 className="font-bold">Классы</h4>
               <Button
                 variant="ghost"
-                size="icon"
-                className="h-9 w-9 rounded-full"
-                onClick={handleLogout}
+                className="h-auto py-1.5 px-2 justify-start text-sm hover:bg-secondary/50"
+                onClick={() => onSelectClass("4m")}
               >
-                <LogOut className="h-5 w-5" />
+                <Home className="h-4 w-4 mr-2" />
+                Класс 4М
               </Button>
-            </TooltipTrigger>
-            <TooltipContent side="right">
-              <p>Выйти</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-        
-        {!isCollapsed && (
-          <div className="ml-2 mr-auto">
-            <div className="text-sm font-medium">{isAdmin ? "Администратор" : "Ученик"}</div>
-            <div className="text-xs text-muted-foreground">Класс 4М</div>
+            </div>
           </div>
-        )}
-        
-        {/* Admin panel toggle button (only for admins) */}
-        {isAdmin && (
-          <TooltipProvider delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="ml-auto h-8 w-8"
-                  onClick={onToggleAdminPanel}
-                >
-                  <Settings className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Панель администратора</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
-        
-        {!isAdmin && !isCollapsed && (
-          <TooltipProvider delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="ml-auto h-8 w-8"
-                >
-                  <Users className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Участники</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
-      </div>
-    </div>
+          <Separator />
+          <div className="mb-4 mt-6">
+            <div className="space-y-2 font-medium">
+              <h4 className="font-bold">Каналы</h4>
+              <Button
+                variant="ghost"
+                className="h-auto py-1.5 px-2 justify-start text-sm hover:bg-secondary/50"
+                onClick={() => onSelectChannel("general")}
+              >
+                <Users className="h-4 w-4 mr-2" />
+                Общий чат
+              </Button>
+              <Button
+                variant="ghost"
+                className="h-auto py-1.5 px-2 justify-start text-sm hover:bg-secondary/50"
+                onClick={() => onSelectChannel("announcements")}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Объявления
+              </Button>
+              <Button
+                variant="ghost"
+                className="h-auto py-1.5 px-2 justify-start text-sm hover:bg-secondary/50"
+                onClick={() => onSelectChannel("questions")}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Вопросы
+              </Button>
+              <Button
+                variant="ghost"
+                className="h-auto py-1.5 px-2 justify-start text-sm hover:bg-secondary/50"
+                onClick={() => onSelectChannel("homework")}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Домашняя работа
+              </Button>
+              <Button
+                variant="ghost"
+                className="h-auto py-1.5 px-2 justify-start text-sm hover:bg-secondary/50"
+                onClick={() => onSelectChannel("exams")}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Экзамены
+              </Button>
+              <Button
+                variant="ghost"
+                className="h-auto py-1.5 px-2 justify-start text-sm hover:bg-secondary/50"
+                onClick={() => onSelectChannel("resources")}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Материалы
+              </Button>
+              <Button
+                variant="ghost"
+                className="h-auto py-1.5 px-2 justify-start text-sm hover:bg-secondary/50"
+                onClick={() => onSelectChannel("group-a")}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Группа A
+              </Button>
+              <Button
+                variant="ghost"
+                className="h-auto py-1.5 px-2 justify-start text-sm hover:bg-secondary/50"
+                onClick={() => onSelectChannel("group-b")}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Группа B
+              </Button>
+            </div>
+          </div>
+        </ScrollArea>
+        <div className="p-5 pt-0 flex flex-col gap-2">
+          <Separator />
+          <div className="flex items-center justify-between rounded-md p-2">
+            <div className="flex items-center space-x-2">
+              <EmojiAvatarSelector currentEmoji={avatarEmoji} />
+              <div>
+                <p className="text-sm font-medium leading-none">
+                  {localStorage.getItem("userName")}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {localStorage.getItem("userEmail")}
+                </p>
+              </div>
+            </div>
+            <Settings className="h-4 w-4 text-muted-foreground" />
+          </div>
+          <Button variant="outline" className="w-full mt-2" onClick={handleLogout}>
+            <LogOut className="h-4 w-4 mr-2" />
+            Выйти
+          </Button>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 };
 
