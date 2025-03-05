@@ -44,10 +44,13 @@ const EmojiAvatarSelector = ({
     
     if (userId) {
       try {
-        // Update the user's avatar_emoji
+        // Need to use any type since we don't have avatar_emoji in our type definitions yet
         const { error } = await supabase
           .from("users")
-          .update({ avatar_emoji: emoji })
+          .update({ 
+            // Don't specify type to allow any field to be updated
+            avatar_emoji: emoji 
+          } as any)
           .eq("id", userId);
           
         if (error) {
