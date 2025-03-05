@@ -3,23 +3,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "@/components/Sidebar";
 import ChatRoom from "@/components/ChatRoom";
-
-// Mock data mapping channel IDs to names
-const channelNames: Record<string, string> = {
-  "announcements": "📢 Объявления",
-  "general": "💬 Общий чат",
-  "questions": "❓ Вопросы",
-  "homework": "📚 Домашняя работа",
-  "exams": "📝 Экзамены",
-  "resources": "📌 Материалы",
-  "group-a": "👥 Группа А",
-  "group-b": "👥 Группа Б",
-};
-
-// Mock data mapping class IDs to names
-const classNames: Record<string, string> = {
-  "4m": "Класс 4М",
-};
+import { supabase } from "@/integrations/supabase/client";
 
 const Dashboard = () => {
   const [activeClass, setActiveClass] = useState(() => {
@@ -28,6 +12,10 @@ const Dashboard = () => {
   const [activeChannel, setActiveChannel] = useState("general");
   const [userName, setUserName] = useState(() => {
     return localStorage.getItem("userName") || "";
+  });
+  const [channelNames, setChannelNames] = useState<Record<string, string>>({});
+  const [classNames, setClassNames] = useState<Record<string, string>>({
+    "4m": "Класс 4М",
   });
   
   const navigate = useNavigate();
@@ -48,6 +36,48 @@ const Dashboard = () => {
   useEffect(() => {
     localStorage.setItem("activeClass", activeClass);
   }, [activeClass]);
+  
+  // Fetch channel names from database
+  useEffect(() => {
+    const fetchChannels = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("channels")
+          .select("id, name, is_private")
+          .eq("class_id", activeClass);
+          
+        if (error) {
+          console.error("Error fetching channels:", error);
+          return;
+        }
+        
+        // Create map of channel IDs to names with emojis based on type
+        const channelMap: Record<string, string> = {};
+        
+        data.forEach(channel => {
+          let emoji = "";
+          
+          // Assign emoji based on channel ID or type
+          if (channel.id === "announcements") emoji = "📢";
+          else if (channel.id === "general") emoji = "💬";
+          else if (channel.id === "questions") emoji = "❓";
+          else if (channel.id === "homework") emoji = "📚";
+          else if (channel.id === "exams") emoji = "📝";
+          else if (channel.id === "resources") emoji = "📌";
+          else if (channel.id.startsWith("group-")) emoji = "👥";
+          else emoji = channel.is_private ? "🔒" : "📄";
+          
+          channelMap[channel.id] = `${emoji} ${channel.name}`;
+        });
+        
+        setChannelNames(channelMap);
+      } catch (error) {
+        console.error("Error in fetchChannels:", error);
+      }
+    };
+    
+    fetchChannels();
+  }, [activeClass]);
 
   return (
     <div className="h-screen flex flex-col">
@@ -61,7 +91,7 @@ const Dashboard = () => {
         <div className="flex-1 flex flex-col bg-background">
           <ChatRoom
             channelId={activeChannel}
-            channelName={`${classNames[activeClass]} • ${channelNames[activeChannel]}`}
+            channelName={`${classNames[activeClass]} • ${channelNames[activeChannel] || activeChannel}`}
           />
         </div>
       </div>

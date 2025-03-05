@@ -1,6 +1,8 @@
 
 import { useEffect, useRef } from "react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import MessageMedia from "./MessageMedia";
+import EmojiAvatarSelector from "./EmojiAvatarSelector";
 
 type Message = {
   id: string;
@@ -8,9 +10,12 @@ type Message = {
     id: string;
     name: string;
     avatar?: string;
+    emoji?: string;
   };
   content: string;
   timestamp: Date;
+  media_url?: string;
+  media_type?: string;
 };
 
 interface MessageListProps {
@@ -38,10 +43,15 @@ const MessageList = ({ messages }: MessageListProps) => {
         messages.map((message) => (
           <div key={message.id} className="flex items-start gap-3 animate-slide-in group">
             <Avatar className="mt-0.5 w-8 h-8 border">
-              <AvatarImage src={message.user.avatar} alt={message.user.name} />
-              <AvatarFallback className="text-xs font-medium">
-                {message.user.name.split(' ').map(n => n[0]).join('')}
-              </AvatarFallback>
+              {message.user.emoji ? (
+                <AvatarFallback className="text-sm">
+                  {message.user.emoji}
+                </AvatarFallback>
+              ) : (
+                <AvatarFallback className="text-xs font-medium">
+                  {message.user.name.split(' ').map(n => n[0]).join('')}
+                </AvatarFallback>
+              )}
             </Avatar>
             <div className="flex-1 min-w-0">
               <div className="flex items-baseline gap-2">
@@ -50,7 +60,19 @@ const MessageList = ({ messages }: MessageListProps) => {
                   {formatTime(message.timestamp)}
                 </span>
               </div>
-              <p className="text-sm mt-1 break-words">{message.content}</p>
+              
+              {message.content && (
+                <p className="text-sm mt-1 break-words">{message.content}</p>
+              )}
+              
+              {message.media_url && message.media_type && (
+                <div className="mt-2">
+                  <MessageMedia 
+                    url={message.media_url} 
+                    type={message.media_type}
+                  />
+                </div>
+              )}
             </div>
           </div>
         ))
