@@ -80,7 +80,8 @@ const MediaUploader = ({
       
       const { data: { session } } = await supabase.auth.getSession();
       
-      const response = await fetch(`${supabase.functions.url}/upload-media`, {
+      // Using string concatenation to avoid TypeScript error with supabase.functions.url
+      const response = await fetch("https://plzgfbydqknqgjqbiuxd.supabase.co/functions/v1/upload-media", {
         method: 'POST',
         body: formData,
         headers: session?.access_token 

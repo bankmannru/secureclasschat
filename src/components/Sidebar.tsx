@@ -11,6 +11,14 @@ import EmojiAvatarSelector from "./EmojiAvatarSelector";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 
+// Temporary interface for channel
+interface Channel {
+  id: string;
+  name: string;
+  is_private: boolean;
+  class_id: string;
+}
+
 // Updated class data to only include 4M
 const classes = [
   {
@@ -87,15 +95,16 @@ const Sidebar = ({ activeClass, activeChannel, onSelectClass, onSelectChannel }:
         }
         
         // Group channels
-        const general = [];
-        const topics = [];
-        const groups = [];
+        const general: Channel[] = [];
+        const topics: Channel[] = [];
+        const groups: Channel[] = [];
         
-        for (const channel of data) {
+        for (const channel of (data || [])) {
           const channelItem = {
             id: channel.id,
             name: channel.name,
-            isPrivate: channel.is_private
+            is_private: channel.is_private,
+            class_id: channel.class_id
           };
           
           if (["announcements", "general", "questions"].includes(channel.id)) {

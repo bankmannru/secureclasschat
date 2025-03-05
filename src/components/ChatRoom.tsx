@@ -1,10 +1,29 @@
-
 import { useState, useEffect } from "react";
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
 import AdminPanel from "./AdminPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+
+interface Message {
+  id: string;
+  content: string;
+  created_at: string;
+  media_url?: string;
+  media_type?: string;
+  users: {
+    id: string;
+    user_name: string;
+    avatar_emoji: string;
+  };
+}
+
+interface Channel {
+  id: string;
+  name: string;
+  class_id: string;
+  is_private: boolean;
+}
 
 interface ChatRoomProps {
   channelId: string;
@@ -14,7 +33,7 @@ interface ChatRoomProps {
 const ChatRoom = ({ channelId, channelName }: ChatRoomProps) => {
   const [messages, setMessages] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [channels, setChannels] = useState<any[]>([]);
+  const [channels, setChannels] = useState<Channel[]>([]);
   const [isMuted, setIsMuted] = useState(false);
   const [isClassBlocked, setIsClassBlocked] = useState(false);
   
@@ -121,7 +140,7 @@ const ChatRoom = ({ channelId, channelName }: ChatRoomProps) => {
         }
 
         // Format messages for the MessageList component
-        const formattedMessages = data.map((message) => ({
+        const formattedMessages = data.map((message: any) => ({
           id: message.id,
           user: {
             id: message.users.id,

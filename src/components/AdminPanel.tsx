@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +26,22 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+interface Channel {
+  id: string;
+  name: string;
+  class_id: string;
+  is_private: boolean;
+  created_by?: string;
+  created_at?: string;
+}
+
+interface User {
+  id: string;
+  user_name: string;
+  avatar_emoji: string;
+  created_at?: string;
+}
+
 interface AdminPanelProps {
   classId: string;
   onChannelCreated?: () => void;
@@ -40,8 +55,8 @@ const AdminPanel = ({ classId, onChannelCreated }: AdminPanelProps) => {
   const [channelName, setChannelName] = useState("");
   const [channelId, setChannelId] = useState("");
   const [isPrivate, setIsPrivate] = useState(false);
-  const [channels, setChannels] = useState<any[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
+  const [channels, setChannels] = useState<Channel[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [selectedUserId, setSelectedUserId] = useState("");
   const [selectedChannelId, setSelectedChannelId] = useState("");
   const [muteHours, setMuteHours] = useState(1);
@@ -51,7 +66,6 @@ const AdminPanel = ({ classId, onChannelCreated }: AdminPanelProps) => {
   
   const userId = localStorage.getItem("userId");
   
-  // Check if user is admin
   useEffect(() => {
     if (!userId) return;
     
@@ -74,7 +88,6 @@ const AdminPanel = ({ classId, onChannelCreated }: AdminPanelProps) => {
     checkAdmin();
   }, [userId]);
   
-  // Fetch channels
   useEffect(() => {
     if (!isOpen || !currentAction) return;
     
@@ -99,7 +112,6 @@ const AdminPanel = ({ classId, onChannelCreated }: AdminPanelProps) => {
     fetchChannels();
   }, [isOpen, currentAction, classId]);
   
-  // Fetch users
   useEffect(() => {
     if (!isOpen || currentAction !== 'muteUser') return;
     
@@ -127,7 +139,6 @@ const AdminPanel = ({ classId, onChannelCreated }: AdminPanelProps) => {
     setCurrentAction(action);
     setIsOpen(true);
     
-    // Reset form fields
     setChannelName("");
     setChannelId("");
     setIsPrivate(false);
@@ -146,7 +157,6 @@ const AdminPanel = ({ classId, onChannelCreated }: AdminPanelProps) => {
     setIsLoading(true);
     
     try {
-      // Format channel ID (lowercase, replace spaces with hyphens)
       const formattedChannelId = channelId.toLowerCase().replace(/\s+/g, '-');
       
       const { error } = await supabase
@@ -221,7 +231,6 @@ const AdminPanel = ({ classId, onChannelCreated }: AdminPanelProps) => {
     setIsLoading(true);
     
     try {
-      // Calculate mute end time
       const muteUntil = new Date();
       muteUntil.setHours(muteUntil.getHours() + muteHours);
       

@@ -5,6 +5,14 @@ import Sidebar from "@/components/Sidebar";
 import ChatRoom from "@/components/ChatRoom";
 import { supabase } from "@/integrations/supabase/client";
 
+// Temporary interface for Channel
+interface Channel {
+  id: string;
+  name: string;
+  is_private: boolean;
+  class_id: string;
+}
+
 const Dashboard = () => {
   const [activeClass, setActiveClass] = useState(() => {
     return localStorage.getItem("activeClass") || "4m";
@@ -54,7 +62,7 @@ const Dashboard = () => {
         // Create map of channel IDs to names with emojis based on type
         const channelMap: Record<string, string> = {};
         
-        data.forEach(channel => {
+        (data || []).forEach((channel: Channel) => {
           let emoji = "";
           
           // Assign emoji based on channel ID or type
