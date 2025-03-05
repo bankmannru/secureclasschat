@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import Sidebar from "@/components/Sidebar";
 import ChatRoom from "@/components/ChatRoom";
 import { supabase } from "@/integrations/supabase/client";
+import { setupAdminUser, setupDefaultChannels } from "@/utils/setupUtils";
 
 // Temporary interface for Channel
 interface Channel {
@@ -27,6 +28,7 @@ const Dashboard = () => {
   });
   
   const navigate = useNavigate();
+  const userId = localStorage.getItem("userId");
 
   useEffect(() => {
     // Check if the user is authenticated
@@ -44,6 +46,17 @@ const Dashboard = () => {
   useEffect(() => {
     localStorage.setItem("activeClass", activeClass);
   }, [activeClass]);
+  
+  // Initialize admin and channels
+  useEffect(() => {
+    if (userId) {
+      // Setup the current user as admin for testing
+      setupAdminUser(userId);
+      
+      // Setup default channels for the active class
+      setupDefaultChannels(activeClass);
+    }
+  }, [userId, activeClass]);
   
   // Fetch channel names from database
   useEffect(() => {

@@ -80,7 +80,7 @@ const MediaUploader = ({
       
       const { data: { session } } = await supabase.auth.getSession();
       
-      // Using string concatenation to avoid TypeScript error with supabase.functions.url
+      // Using direct URL and fetch for the upload
       const response = await fetch("https://plzgfbydqknqgjqbiuxd.supabase.co/functions/v1/upload-media", {
         method: 'POST',
         body: formData,
@@ -89,11 +89,12 @@ const MediaUploader = ({
           : {},
       });
       
-      const result = await response.json();
-      
       if (!response.ok) {
-        throw new Error(result.error || 'Ошибка загрузки');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Ошибка загрузки');
       }
+      
+      const result = await response.json();
       
       if (onUploadComplete) onUploadComplete();
       toast.success('Медиа успешно загружено');
