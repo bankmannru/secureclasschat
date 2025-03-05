@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "@/components/Sidebar";
 import ChatRoom from "@/components/ChatRoom";
+import { supabase } from "@/integrations/supabase/client";
 
 // Mock data mapping channel IDs to names
 const channelNames: Record<string, string> = {
@@ -29,6 +30,7 @@ const Dashboard = () => {
   const [userName, setUserName] = useState(() => {
     return localStorage.getItem("userName") || "";
   });
+  const [avatarEmoji, setAvatarEmoji] = useState<string>("👤");
   
   const navigate = useNavigate();
 
@@ -36,11 +38,26 @@ const Dashboard = () => {
     // Check if the user is authenticated
     const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
     const storedUserName = localStorage.getItem("userName");
+    const userId = localStorage.getItem("userId");
     
     if (!isAuthenticated || !storedUserName) {
       navigate("/");
     } else {
       setUserName(storedUserName);
+      
+      // Fetch user's avatar emoji
+      if (userId) {
+        supabase
+          .from("users")
+          .select("avatar_emoji")
+          .eq("id", userId)
+          .single()
+          .then(({ data, error }) => {
+            if (!error && data) {
+              setAvatarEmoji(data.avatar_emoji || "👤");
+            }
+          });
+      }
     }
   }, [navigate]);
 

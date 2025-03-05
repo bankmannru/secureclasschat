@@ -31,9 +31,12 @@ const ChatRoom = ({ channelId, channelName }: ChatRoomProps) => {
             id,
             content,
             created_at,
+            media_url,
+            media_type,
             users (
               id,
-              user_name
+              user_name,
+              avatar_emoji
             )
           `)
           .eq("class_id", classId)
@@ -51,9 +54,12 @@ const ChatRoom = ({ channelId, channelName }: ChatRoomProps) => {
           user: {
             id: message.users.id,
             name: message.users.user_name,
+            avatarEmoji: message.users.avatar_emoji,
           },
           content: message.content,
           timestamp: new Date(message.created_at),
+          mediaUrl: message.media_url,
+          mediaType: message.media_type
         }));
 
         setMessages(formattedMessages);
@@ -87,7 +93,7 @@ const ChatRoom = ({ channelId, channelName }: ChatRoomProps) => {
           // When a new message is inserted, fetch the user data
           const { data, error } = await supabase
             .from("users")
-            .select("user_name")
+            .select("user_name, avatar_emoji")
             .eq("id", payload.new.user_id)
             .single();
             
@@ -102,9 +108,12 @@ const ChatRoom = ({ channelId, channelName }: ChatRoomProps) => {
             user: {
               id: payload.new.user_id,
               name: data.user_name,
+              avatarEmoji: data.avatar_emoji
             },
             content: payload.new.content,
             timestamp: new Date(payload.new.created_at),
+            mediaUrl: payload.new.media_url,
+            mediaType: payload.new.media_type
           };
           
           setMessages((currentMessages) => [...currentMessages, newMessage]);
@@ -121,7 +130,7 @@ const ChatRoom = ({ channelId, channelName }: ChatRoomProps) => {
     };
   }, [channelId, classId]);
 
-  const handleSendMessage = async (content: string) => {
+  const handleSendMessage = async (content: string, mediaUrl?: string, mediaType?: string) => {
     if (!userId || !userName) {
       toast.error("Пожалуйста, войдите снова");
       return;
@@ -130,21 +139,32 @@ const ChatRoom = ({ channelId, channelName }: ChatRoomProps) => {
     try {
       // Create a temporary message with a generated ID for immediate display
       const tempId = crypto.randomUUID();
+      
+      // Get user avatar emoji
+      const { data: userData } = await supabase
+        .from("users")
+        .select("avatar_emoji")
+        .eq("id", userId)
+        .single();
+      
       const newMessage = {
         id: tempId,
         user: {
           id: userId,
           name: userName,
+          avatarEmoji: userData?.avatar_emoji
         },
         content,
         timestamp: new Date(),
+        mediaUrl,
+        mediaType
       };
       
       // Add the message to the UI immediately
       setMessages((currentMessages) => [...currentMessages, newMessage]);
       
       // Insert the message into Supabase
-      const { error, data } = await supabase
+      const { error } = await supabase
         .from("messages")
         .insert([
           {
@@ -152,9 +172,10 @@ const ChatRoom = ({ channelId, channelName }: ChatRoomProps) => {
             class_id: classId,
             channel_id: channelId,
             content,
+            media_url: mediaUrl,
+            media_type: mediaType
           }
-        ])
-        .select();
+        ]);
 
       if (error) {
         toast.error("Не удалось отправить сообщение");
@@ -187,7 +208,10 @@ const ChatRoom = ({ channelId, channelName }: ChatRoomProps) => {
         <MessageList messages={messages} />
       )}
       
-      <MessageInput onSendMessage={handleSendMessage} disabled={isLoading} />
+      <MessageInput 
+        onSendMessage={handleSendMessage} 
+        disabled={isLoading} 
+      />
     </div>
   );
 };
