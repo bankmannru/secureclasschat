@@ -128,8 +128,23 @@ const ChatRoom = ({ channelId, channelName }: ChatRoomProps) => {
     }
 
     try {
+      // Create a temporary message with a generated ID for immediate display
+      const tempId = crypto.randomUUID();
+      const newMessage = {
+        id: tempId,
+        user: {
+          id: userId,
+          name: userName,
+        },
+        content,
+        timestamp: new Date(),
+      };
+      
+      // Add the message to the UI immediately
+      setMessages((currentMessages) => [...currentMessages, newMessage]);
+      
       // Insert the message into Supabase
-      const { error } = await supabase
+      const { error, data } = await supabase
         .from("messages")
         .insert([
           {
@@ -138,11 +153,17 @@ const ChatRoom = ({ channelId, channelName }: ChatRoomProps) => {
             channel_id: channelId,
             content,
           }
-        ]);
+        ])
+        .select();
 
       if (error) {
         toast.error("Не удалось отправить сообщение");
         console.error("Error sending message:", error);
+        
+        // Remove the temporary message if there was an error
+        setMessages((currentMessages) => 
+          currentMessages.filter(msg => msg.id !== tempId)
+        );
       }
     } catch (error) {
       console.error("Error in handleSendMessage:", error);
