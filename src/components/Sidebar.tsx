@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Book, ChevronLeft, ChevronRight, LogOut, Users } from "lucide-react";
+import { Book, ChevronLeft, ChevronRight, LogOut, Users, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -18,45 +18,53 @@ const classes = [
   }
 ];
 
-// Mock channel data - in a real app, this would come from Supabase
-const channelGroups = [
-  {
-    id: "general",
-    name: "Общее",
-    channels: [
-      { id: "announcements", name: "Объявления", isPrivate: true },
-      { id: "general", name: "Общий чат", isPrivate: false, unreadCount: 3 },
-      { id: "questions", name: "Вопросы", isPrivate: false },
-    ],
-  },
-  {
-    id: "topics",
-    name: "Темы",
-    channels: [
-      { id: "homework", name: "Домашняя работа", isPrivate: false },
-      { id: "exams", name: "Экзамены", isPrivate: false },
-      { id: "resources", name: "Материалы", isPrivate: false },
-    ],
-  },
-  {
-    id: "groups",
-    name: "Группы",
-    channels: [
-      { id: "group-a", name: "Группа А", isPrivate: true },
-      { id: "group-b", name: "Группа Б", isPrivate: true },
-    ],
-  },
-];
-
 interface SidebarProps {
   activeClass: string;
   activeChannel: string;
   onSelectClass: (classId: string) => void;
   onSelectChannel: (channelId: string) => void;
+  isAdmin?: boolean;
+  onToggleAdminPanel?: () => void;
 }
 
-const Sidebar = ({ activeClass, activeChannel, onSelectClass, onSelectChannel }: SidebarProps) => {
+const Sidebar = ({ 
+  activeClass, 
+  activeChannel, 
+  onSelectClass, 
+  onSelectChannel, 
+  isAdmin = false, 
+  onToggleAdminPanel 
+}: SidebarProps) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [channelGroups, setChannelGroups] = useState([
+    {
+      id: "general",
+      name: "Общее",
+      channels: [
+        { id: "announcements", name: "Объявления", isPrivate: true },
+        { id: "general", name: "Общий чат", isPrivate: false, unreadCount: 3 },
+        { id: "questions", name: "Вопросы", isPrivate: false },
+      ],
+    },
+    {
+      id: "topics",
+      name: "Темы",
+      channels: [
+        { id: "homework", name: "Домашняя работа", isPrivate: false },
+        { id: "exams", name: "Экзамены", isPrivate: false },
+        { id: "resources", name: "Материалы", isPrivate: false },
+      ],
+    },
+    {
+      id: "groups",
+      name: "Группы",
+      channels: [
+        { id: "group-a", name: "Группа А", isPrivate: true },
+        { id: "group-b", name: "Группа Б", isPrivate: true },
+      ],
+    },
+  ]);
+  
   const navigate = useNavigate();
 
   // Load the active class from localStorage when component mounts
@@ -65,11 +73,25 @@ const Sidebar = ({ activeClass, activeChannel, onSelectClass, onSelectChannel }:
     if (storedActiveClass && classes.some(c => c.id === storedActiveClass)) {
       onSelectClass(storedActiveClass);
     }
+    
+    // Load custom channels if available
+    const storedChannelGroups = localStorage.getItem("channelGroups");
+    if (storedChannelGroups) {
+      try {
+        const parsedGroups = JSON.parse(storedChannelGroups);
+        setChannelGroups(parsedGroups);
+      } catch (error) {
+        console.error("Error parsing stored channel groups:", error);
+      }
+    }
   }, [onSelectClass]);
 
   const handleLogout = () => {
     localStorage.removeItem("isAuthenticated");
+    localStorage.removeItem("isAdmin");
     localStorage.removeItem("activeClass");
+    localStorage.removeItem("userId");
+    localStorage.removeItem("userName");
     toast.success("Выход выполнен успешно");
     navigate("/");
   };
@@ -166,12 +188,33 @@ const Sidebar = ({ activeClass, activeChannel, onSelectClass, onSelectChannel }:
         
         {!isCollapsed && (
           <div className="ml-2 mr-auto">
-            <div className="text-sm font-medium">Ученик</div>
+            <div className="text-sm font-medium">{isAdmin ? "Администратор" : "Ученик"}</div>
             <div className="text-xs text-muted-foreground">Класс 4М</div>
           </div>
         )}
         
-        {!isCollapsed && (
+        {/* Admin panel toggle button (only for admins) */}
+        {isAdmin && (
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="ml-auto h-8 w-8"
+                  onClick={onToggleAdminPanel}
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Панель администратора</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+        
+        {!isAdmin && !isCollapsed && (
           <TooltipProvider delayDuration={300}>
             <Tooltip>
               <TooltipTrigger asChild>

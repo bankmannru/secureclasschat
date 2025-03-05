@@ -46,6 +46,8 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          media_type: string | null
+          media_url: string | null
           user_id: string
         }
         Insert: {
@@ -54,6 +56,8 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          media_type?: string | null
+          media_url?: string | null
           user_id: string
         }
         Update: {
@@ -62,6 +66,8 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          media_type?: string | null
+          media_url?: string | null
           user_id?: string
         }
         Relationships: [
@@ -76,16 +82,19 @@ export type Database = {
       }
       users: {
         Row: {
+          avatar_emoji: string | null
           created_at: string
           id: string
           user_name: string
         }
         Insert: {
+          avatar_emoji?: string | null
           created_at?: string
           id?: string
           user_name: string
         }
         Update: {
+          avatar_emoji?: string | null
           created_at?: string
           id?: string
           user_name?: string

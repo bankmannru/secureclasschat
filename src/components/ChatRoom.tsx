@@ -1,193 +1,225 @@
 
 import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import MessageList from "./MessageList";
 import MessageInput from "./MessageInput";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { Shield, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface ChatRoomProps {
   channelId: string;
   channelName: string;
+  isUserMuted?: boolean;
+  mutedUntil?: Date | null;
+  muteReason?: string;
 }
 
-const ChatRoom = ({ channelId, channelName }: ChatRoomProps) => {
-  const [messages, setMessages] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  
-  const classId = localStorage.getItem("activeClass") || "4m";
-  const userId = localStorage.getItem("userId");
-  const userName = localStorage.getItem("userName");
+type Message = {
+  id: string;
+  user: {
+    id: string;
+    name: string;
+    avatar?: string;
+  };
+  content: string;
+  timestamp: Date;
+  media_url?: string;
+  media_type?: string;
+};
 
-  // Fetch initial messages
+const ChatRoom = ({ 
+  channelId, 
+  channelName, 
+  isUserMuted = false, 
+  mutedUntil = null, 
+  muteReason = "" 
+}: ChatRoomProps) => {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const isAdmin = localStorage.getItem("isAdmin") === "true";
+
+  // Load messages from Supabase when channel changes
   useEffect(() => {
     const fetchMessages = async () => {
       setIsLoading(true);
+      setError(null);
       
       try {
-        // Get messages for this channel and class
+        const classId = localStorage.getItem("activeClass") || "4m";
+        
+        // Fetch messages for the selected channel
         const { data, error } = await supabase
           .from("messages")
           .select(`
             id,
             content,
             created_at,
-            users (
-              id,
-              user_name
-            )
+            media_url,
+            media_type,
+            users:user_id(id, user_name, avatar_emoji)
           `)
-          .eq("class_id", classId)
           .eq("channel_id", channelId)
-          .order("created_at", { ascending: true });
-
-        if (error) {
-          console.error("Error fetching messages:", error);
-          return;
-        }
-
-        // Format messages for the MessageList component
-        const formattedMessages = data.map((message) => ({
-          id: message.id,
+          .eq("class_id", classId)
+          .order("created_at");
+          
+        if (error) throw error;
+        
+        // Transform data for the MessageList component
+        const formattedMessages: Message[] = (data || []).map((msg) => ({
+          id: msg.id,
+          content: msg.content,
+          timestamp: new Date(msg.created_at),
           user: {
-            id: message.users.id,
-            name: message.users.user_name,
+            id: msg.users?.id || "unknown",
+            name: msg.users?.user_name || "Unknown User",
+            avatar: msg.users?.avatar_emoji || "👤"
           },
-          content: message.content,
-          timestamp: new Date(message.created_at),
+          media_url: msg.media_url,
+          media_type: msg.media_type
         }));
-
+        
         setMessages(formattedMessages);
-      } catch (error) {
-        console.error("Error in fetchMessages:", error);
+      } catch (err) {
+        console.error("Error fetching messages:", err);
+        setError("Failed to load messages. Please try again later.");
       } finally {
         setIsLoading(false);
       }
     };
-
-    fetchMessages();
-  }, [channelId, classId]);
-
-  // Subscribe to real-time updates
-  useEffect(() => {
-    console.log("Setting up realtime subscription for:", classId, channelId);
     
-    // Subscribe to new messages in this channel
+    fetchMessages();
+    
+    // Set up a realtime subscription for new messages
     const channel = supabase
-      .channel('public:messages')
-      .on('postgres_changes', 
-        { 
-          event: 'INSERT', 
-          schema: 'public', 
-          table: 'messages',
-          filter: `class_id=eq.${classId}&channel_id=eq.${channelId}`
-        }, 
+      .channel("table-db-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+          filter: `channel_id=eq.${channelId}`
+        },
         async (payload) => {
-          console.log("New message received:", payload);
-          
-          // When a new message is inserted, fetch the user data
-          const { data, error } = await supabase
-            .from("users")
-            .select("user_name")
-            .eq("id", payload.new.user_id)
-            .single();
+          // When a new message is inserted, fetch the user details
+          try {
+            const { data: userData, error: userError } = await supabase
+              .from("users")
+              .select("id, user_name, avatar_emoji")
+              .eq("id", payload.new.user_id)
+              .single();
+              
+            if (userError) throw userError;
             
-          if (error) {
-            console.error("Error fetching user data:", error);
-            return;
+            const newMessage: Message = {
+              id: payload.new.id,
+              content: payload.new.content,
+              timestamp: new Date(payload.new.created_at),
+              user: {
+                id: userData?.id || "unknown",
+                name: userData?.user_name || "Unknown User",
+                avatar: userData?.avatar_emoji || "👤"
+              },
+              media_url: payload.new.media_url,
+              media_type: payload.new.media_type
+            };
+            
+            setMessages((currentMessages) => [...currentMessages, newMessage]);
+          } catch (err) {
+            console.error("Error processing realtime message:", err);
           }
-
-          // Add the new message to state
-          const newMessage = {
-            id: payload.new.id,
-            user: {
-              id: payload.new.user_id,
-              name: data.user_name,
-            },
-            content: payload.new.content,
-            timestamp: new Date(payload.new.created_at),
-          };
-          
-          setMessages((currentMessages) => [...currentMessages, newMessage]);
         }
       )
-      .subscribe((status) => {
-        console.log("Subscription status:", status);
-      });
-
-    // Clean up subscription on unmount
+      .subscribe();
+      
+    // Cleanup subscription on unmount
     return () => {
-      console.log("Cleaning up subscription");
       supabase.removeChannel(channel);
     };
-  }, [channelId, classId]);
+  }, [channelId]);
 
-  const handleSendMessage = async (content: string) => {
-    if (!userId || !userName) {
-      toast.error("Пожалуйста, войдите снова");
-      return;
-    }
-
+  const handleSendMessage = async (content: string, mediaUrl?: string, mediaType?: string) => {
+    if (isUserMuted && !isAdmin) return;
+    
     try {
-      // Create a temporary message with a generated ID for immediate display
-      const tempId = crypto.randomUUID();
-      const newMessage = {
-        id: tempId,
-        user: {
-          id: userId,
-          name: userName,
-        },
-        content,
-        timestamp: new Date(),
-      };
+      const userId = localStorage.getItem("userId");
+      const classId = localStorage.getItem("activeClass") || "4m";
       
-      // Add the message to the UI immediately
-      setMessages((currentMessages) => [...currentMessages, newMessage]);
-      
-      // Insert the message into Supabase
-      const { error, data } = await supabase
-        .from("messages")
-        .insert([
-          {
-            user_id: userId,
-            class_id: classId,
-            channel_id: channelId,
-            content,
-          }
-        ])
-        .select();
-
-      if (error) {
-        toast.error("Не удалось отправить сообщение");
-        console.error("Error sending message:", error);
-        
-        // Remove the temporary message if there was an error
-        setMessages((currentMessages) => 
-          currentMessages.filter(msg => msg.id !== tempId)
-        );
+      if (!userId) {
+        throw new Error("User not authenticated");
       }
-    } catch (error) {
-      console.error("Error in handleSendMessage:", error);
+      
+      // Insert message into Supabase
+      const { error } = await supabase
+        .from("messages")
+        .insert({
+          content,
+          user_id: userId,
+          channel_id: channelId,
+          class_id: classId,
+          media_url: mediaUrl,
+          media_type: mediaType
+        });
+        
+      if (error) throw error;
+      
+    } catch (err) {
+      console.error("Error sending message:", err);
+      setError("Failed to send message. Please try again.");
     }
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="border-b py-3 px-4 bg-background/90 backdrop-blur-sm">
-        <h2 className="font-medium text-sm">{channelName}</h2>
+    <div className="flex flex-col h-full bg-background relative">
+      {/* Channel header */}
+      <div className="border-b p-4 shadow-sm bg-background/80 backdrop-blur-sm sticky top-0 z-10">
+        <h2 className="font-medium text-lg">{channelName}</h2>
       </div>
       
+      {/* Error alert */}
+      {error && (
+        <div className="p-4">
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        </div>
+      )}
+      
+      {/* Muted user warning */}
+      {isUserMuted && !isAdmin && (
+        <div className="px-4 pt-4">
+          <Alert variant="destructive">
+            <Shield className="h-4 w-4" />
+            <AlertTitle>Вы временно заблокированы</AlertTitle>
+            <AlertDescription>
+              <p className="mt-1">{muteReason || "Нарушение правил чата."}</p>
+              {mutedUntil && (
+                <p className="mt-1 font-medium">
+                  Блокировка истекает: {mutedUntil.toLocaleString()}
+                </p>
+              )}
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
+      
+      {/* Messages */}
       {isLoading ? (
         <div className="flex-1 flex items-center justify-center">
-          <div className="flex flex-col items-center space-y-2">
-            <div className="w-8 h-8 border-t-2 border-primary rounded-full animate-spin"></div>
-            <p className="text-sm text-muted-foreground">Загрузка сообщений...</p>
-          </div>
+          <p className="text-muted-foreground animate-pulse">Загрузка сообщений...</p>
         </div>
       ) : (
         <MessageList messages={messages} />
       )}
       
-      <MessageInput onSendMessage={handleSendMessage} disabled={isLoading} />
+      {/* Message input */}
+      <MessageInput 
+        onSendMessage={handleSendMessage} 
+        disabled={isUserMuted && !isAdmin} 
+      />
     </div>
   );
 };
