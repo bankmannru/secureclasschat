@@ -35,7 +35,7 @@ const MessageInput = ({ onSendMessage, disabled = false }: MessageInputProps) =>
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Напишите сообщение..."
+          placeholder={disabled ? "Вы не можете отправлять сообщения" : "Напишите сообщение..."}
           className="min-h-[3rem] max-h-[12rem] flex-1 resize-none"
           disabled={disabled}
         />
