@@ -96,38 +96,59 @@ const ChatRoom = ({
       .on(
         "postgres_changes",
         {
-          event: "INSERT",
+          event: "*", // Listen for all events (INSERT, UPDATE, DELETE)
           schema: "public",
           table: "messages",
           filter: `channel_id=eq.${channelId}`
         },
         async (payload) => {
-          // When a new message is inserted, fetch the user details
-          try {
-            const { data: userData, error: userError } = await supabase
-              .from("users")
-              .select("id, user_name, avatar_emoji")
-              .eq("id", payload.new.user_id)
-              .single();
+          if (payload.eventType === "INSERT") {
+            // When a new message is inserted, fetch the user details
+            try {
+              const { data: userData, error: userError } = await supabase
+                .from("users")
+                .select("id, user_name, avatar_emoji")
+                .eq("id", payload.new.user_id)
+                .single();
+                
+              if (userError) throw userError;
               
-            if (userError) throw userError;
-            
-            const newMessage: Message = {
-              id: payload.new.id,
-              content: payload.new.content,
-              timestamp: new Date(payload.new.created_at),
-              user: {
-                id: userData?.id || "unknown",
-                name: userData?.user_name || "Unknown User",
-                avatar: userData?.avatar_emoji || "👤"
-              },
-              media_url: payload.new.media_url,
-              media_type: payload.new.media_type
-            };
-            
-            setMessages((currentMessages) => [...currentMessages, newMessage]);
-          } catch (err) {
-            console.error("Error processing realtime message:", err);
+              const newMessage: Message = {
+                id: payload.new.id,
+                content: payload.new.content,
+                timestamp: new Date(payload.new.created_at),
+                user: {
+                  id: userData?.id || "unknown",
+                  name: userData?.user_name || "Unknown User",
+                  avatar: userData?.avatar_emoji || "👤"
+                },
+                media_url: payload.new.media_url,
+                media_type: payload.new.media_type
+              };
+              
+              setMessages((currentMessages) => [...currentMessages, newMessage]);
+            } catch (err) {
+              console.error("Error processing realtime message:", err);
+            }
+          } else if (payload.eventType === "UPDATE") {
+            // When a message is updated
+            setMessages(currentMessages => 
+              currentMessages.map(msg => 
+                msg.id === payload.new.id 
+                  ? { 
+                      ...msg, 
+                      content: payload.new.content,
+                      media_url: payload.new.media_url,
+                      media_type: payload.new.media_type
+                    } 
+                  : msg
+              )
+            );
+          } else if (payload.eventType === "DELETE") {
+            // When a message is deleted
+            setMessages(currentMessages => 
+              currentMessages.filter(msg => msg.id !== payload.old.id)
+            );
           }
         }
       )

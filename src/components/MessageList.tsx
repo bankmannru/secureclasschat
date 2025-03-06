@@ -1,6 +1,7 @@
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import MessageActions from "./MessageActions";
 
 type Message = {
   id: string;
@@ -11,6 +12,8 @@ type Message = {
   };
   content: string;
   timestamp: Date;
+  media_url?: string;
+  media_type?: string;
 };
 
 interface MessageListProps {
@@ -19,13 +22,25 @@ interface MessageListProps {
 
 const MessageList = ({ messages }: MessageListProps) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, refreshTrigger]);
+
+  useEffect(() => {
+    const adminStatus = localStorage.getItem("isAdmin") === "true";
+    setIsAdmin(adminStatus);
+  }, []);
 
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const handleMessageUpdated = () => {
+    // Increment trigger to force a re-render and scroll adjustment
+    setRefreshTrigger(prev => prev + 1);
   };
 
   return (
@@ -49,8 +64,27 @@ const MessageList = ({ messages }: MessageListProps) => {
                 <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
                   {formatTime(message.timestamp)}
                 </span>
+                <MessageActions 
+                  messageId={message.id}
+                  content={message.content}
+                  isAdmin={isAdmin}
+                  onMessageUpdated={handleMessageUpdated}
+                />
               </div>
-              <p className="text-sm mt-1 break-words">{message.content}</p>
+              
+              {message.content && (
+                <p className="text-sm mt-1 break-words">{message.content}</p>
+              )}
+              
+              {message.media_url && message.media_type === "image" && (
+                <div className="mt-2 max-w-xs">
+                  <img 
+                    src={message.media_url} 
+                    alt="Message attachment" 
+                    className="rounded-lg max-h-60 object-contain bg-accent" 
+                  />
+                </div>
+              )}
             </div>
           </div>
         ))
