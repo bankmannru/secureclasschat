@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { SendHorizonal } from "lucide-react";
 import ImageUpload from "./ImageUpload";
+import ImageSearch from "./ImageSearch";
 
 interface MessageInputProps {
   onSendMessage: (content: string, mediaUrl?: string, mediaType?: string) => void;
@@ -57,6 +58,7 @@ const MessageInput = ({ onSendMessage, disabled = false }: MessageInputProps) =>
       )}
       <div className="flex items-end gap-3">
         <ImageUpload onImageUploaded={handleImageUploaded} />
+        <ImageSearch onImageSelected={handleImageUploaded} />
         
         <Textarea
           value={message}
